@@ -12,6 +12,6 @@ __all__ = [
     "BLEAK_EXCEPTIONS",
     "CharacteristicMissingError",
     "LD2410BLE",
-    "LD241-BLEState",
+    "LD2410BLEState",
     "get_device",
 ]

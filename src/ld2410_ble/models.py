@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+
 @dataclass(frozen=True)
 class LD2410BLEState:
 
@@ -14,5 +15,9 @@ class LD2410BLEState:
     detection_distance: int = 0
     max_motion_gates: int = 8
     max_static_gates: int = 8
-    motion_energy_gates: list[int] = field(default_factory=lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])
-    static_energy_gates: list[int] = field(default_factory=lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])
+    motion_energy_gates: list[int] = field(
+        default_factory=lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    )
+    static_energy_gates: list[int] = field(
+        default_factory=lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    )

@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import colorsys
 import logging
 import re
 from collections.abc import Callable
-from dataclasses import replace
 from typing import Any, TypeVar
 
-import async_timeout
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
-from bleak.backends.service import BleakGATTCharacteristic, BleakGATTServiceCollection
 from bleak.exc import BleakDBusError
 from bleak_retry_connector import BLEAK_RETRY_EXCEPTIONS as BLEAK_EXCEPTIONS
 from bleak_retry_connector import (
@@ -26,17 +22,16 @@ from .const import (
     CHARACTERISTIC_NOTIFY,
     CHARACTERISTIC_WRITE,
     CMD_BT_PASS,
+    CMD_DISABLE_CONFIG,
     CMD_ENABLE_CONFIG,
     CMD_ENABLE_ENGINEERING_MODE,
-    CMD_DISABLE_CONFIG,
     MOVING_TARGET,
     STATIC_TARGET,
+    engineering_frame_regex,
     frame_regex,
-    engineering_frame_regex
 )
 from .exceptions import CharacteristicMissingError
 from .models import LD2410BLEState
-
 
 BLEAK_BACKOFF_TIME = 0.25
 
@@ -53,6 +48,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_ATTEMPTS = 3
 
+
 class LD2410BLE:
     def __init__(
         self, ble_device: BLEDevice, advertisement_data: AdvertisementData | None = None
@@ -68,7 +64,7 @@ class LD2410BLE:
         self._expected_disconnect = False
         self.loop = asyncio.get_running_loop()
         self._callbacks: list[Callable[[LD2410BLEState], None]] = []
-        self._buf = b''
+        self._buf = b""
 
     def set_ble_device_and_advertisement_data(
         self, ble_device: BLEDevice, advertisement_data: AdvertisementData
@@ -141,7 +137,7 @@ class LD2410BLE:
         return self._state.max_static_gates
 
     @property
-    def motion_energy_gates(self) -> int:
+    def motion_energy_gates(self) -> list[int]:
         return self._state.motion_energy_gates
 
     @property
@@ -181,8 +177,44 @@ class LD2410BLE:
         return self._state.motion_energy_gates[8]
 
     @property
-    def static_energy_gates(self) -> int:
+    def static_energy_gates(self) -> list[int]:
         return self._state.static_energy_gates
+
+    @property
+    def static_energy_gate_0(self) -> int:
+        return self._state.static_energy_gates[0]
+
+    @property
+    def static_energy_gate_1(self) -> int:
+        return self._state.static_energy_gates[1]
+
+    @property
+    def static_energy_gate_2(self) -> int:
+        return self._state.static_energy_gates[2]
+
+    @property
+    def static_energy_gate_3(self) -> int:
+        return self._state.static_energy_gates[3]
+
+    @property
+    def static_energy_gate_4(self) -> int:
+        return self._state.static_energy_gates[4]
+
+    @property
+    def static_energy_gate_5(self) -> int:
+        return self._state.static_energy_gates[5]
+
+    @property
+    def static_energy_gate_6(self) -> int:
+        return self._state.static_energy_gates[6]
+
+    @property
+    def static_energy_gate_7(self) -> int:
+        return self._state.static_energy_gates[7]
+
+    @property
+    def static_energy_gate_8(self) -> int:
+        return self._state.static_energy_gates[8]
 
     async def stop(self) -> None:
         """Stop the LD2410BLE."""
@@ -206,9 +238,7 @@ class LD2410BLE:
         return unregister_callback
 
     async def initialise(self) -> None:
-        _LOGGER.debug(
-            "%s: Sending configuration commands", self.name
-        )
+        _LOGGER.debug("%s: Sending configuration commands", self.name)
         await self._send_command(CMD_BT_PASS)
         await asyncio.sleep(0.1)
         await self._send_command(CMD_ENABLE_CONFIG)
@@ -218,10 +248,11 @@ class LD2410BLE:
         await self._send_command(CMD_DISABLE_CONFIG)
         await asyncio.sleep(0.1)
 
-        _LOGGER.debug(
-            "%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi
-        )
-        await self._client.start_notify(CHARACTERISTIC_NOTIFY, self._notification_handler)
+        _LOGGER.debug("%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi)
+        if self._client is not None:
+            await self._client.start_notify(
+                CHARACTERISTIC_NOTIFY, self._notification_handler
+            )
 
     async def _ensure_connected(self) -> None:
         """Ensure connection to device is established."""
@@ -253,7 +284,8 @@ class LD2410BLE:
             self._client = client
             self._reset_disconnect_timer()
 
-    def intify(self, state): return int.from_bytes(state, byteorder='little')
+    def intify(self, state) -> int:
+        return int.from_bytes(state, byteorder="little")
 
     def _notification_handler(self, _sender: int, data: bytearray) -> None:
         """Handle notification responses."""
@@ -261,47 +293,69 @@ class LD2410BLE:
 
         self._buf += data
         msg = re.search(frame_regex, self._buf)
-        if (msg):
+        if msg:
             self._buf = self._buf[msg.end():]
-            target_state = msg.group('target_state')
-            engineering_data = msg.group('engineering_data')
+            target_state = msg.group("target_state")
+            engineering_data = msg.group("engineering_data")
 
             target_state_int = self.intify(target_state)
-            moving_target = bool(target_state_int & MOVING_TARGET)
-            static_target = bool(target_state_int & STATIC_TARGET)
             sensor_dict = {
-                'is_moving': bool(target_state_int & MOVING_TARGET),
-                'is_static': bool(target_state_int & STATIC_TARGET),
-                'moving_target_distance': self.intify(msg.group('moving_target_distance')),
-                'moving_target_energy': self.intify(msg.group('moving_target_energy')),
-                'static_target_distance': self.intify(msg.group('static_target_distance')),
-                'static_target_energy': self.intify(msg.group('static_target_energy')),
-                'detection_distance': self.intify(msg.group('detection_distance'))
+                "is_moving": bool(target_state_int & MOVING_TARGET),
+                "is_static": bool(target_state_int & STATIC_TARGET),
+                "moving_target_distance": self.intify(
+                    msg.group("moving_target_distance")
+                ),
+                "moving_target_energy": self.intify(msg.group("moving_target_energy")),
+                "static_target_distance": self.intify(
+                    msg.group("static_target_distance")
+                ),
+                "static_target_energy": self.intify(msg.group("static_target_energy")),
+                "detection_distance": self.intify(msg.group("detection_distance")),
             }
 
-            if (engineering_data):
+            if engineering_data:
                 em = re.match(engineering_frame_regex, engineering_data)
-                sensor_dict.update({'max_motion_gates': self.intify(em.group('maximum_motion_gates'))})
-                sensor_dict.update({'max_static_gates': self.intify(em.group('maximum_static_gates'))})
-                sensor_dict.update({'motion_energy_gates': [x for x in em.group('motion_energy_gates')]})
-                sensor_dict.update({'static_energy_gates': [x for x in em.group('static_energy_gates')]})
+                sensor_dict.update(
+                    {"max_motion_gates": self.intify(em.group("maximum_motion_gates"))}
+                )
+                sensor_dict.update(
+                    {"max_static_gates": self.intify(em.group("maximum_static_gates"))}
+                )
+                sensor_dict.update(
+                    {
+                        "motion_energy_gates": [
+                            x for x in em.group("motion_energy_gates")
+                        ]
+                    }
+                )
+                sensor_dict.update(
+                    {
+                        "static_energy_gates": [
+                            x for x in em.group("static_energy_gates")
+                        ]
+                    }
+                )
                 for i in range(0, 9):
-                    sensor_dict.update({'motion_energy_gate_{}'.format(i): em.group('motion_energy_gates')[i]})
+                    sensor_dict.update(
+                        {f"motion_energy_gate_{i}": em.group("motion_energy_gates")[i]}
+                    )
                 for i in range(0, 9):
-                    sensor_dict.update({'static_energy_gate_{}'.format(i): em.group('static_energy_gates')[i]})
+                    sensor_dict.update(
+                        {f"static_energy_gate_{i}": em.group("static_energy_gates")[i]}
+                    )
 
             self._state = LD2410BLEState(
-                is_moving = sensor_dict.get('is_moving'),
-                is_static = sensor_dict.get('is_static'),
-                moving_target_distance = sensor_dict.get('moving_target_distance'),
-                moving_target_energy = sensor_dict.get('moving_target_energy'),
-                static_target_distance = sensor_dict.get('static_target_distance'),
-                static_target_energy = sensor_dict.get('static_target_energy'),
-                detection_distance = sensor_dict.get('detection_distance'),
-                max_motion_gates = sensor_dict.get('max_motion_gates'),
-                max_static_gates = sensor_dict.get('max_static_gates'),
-                motion_energy_gates = sensor_dict.get('motion_energy_gates'),
-                static_energy_gates = sensor_dict.get('static_energy_gates')
+                is_moving=sensor_dict.get("is_moving"),
+                is_static=sensor_dict.get("is_static"),
+                moving_target_distance=sensor_dict.get("moving_target_distance"),
+                moving_target_energy=sensor_dict.get("moving_target_energy"),
+                static_target_distance=sensor_dict.get("static_target_distance"),
+                static_target_energy=sensor_dict.get("static_target_energy"),
+                detection_distance=sensor_dict.get("detection_distance"),
+                max_motion_gates=sensor_dict.get("max_motion_gates"),
+                max_static_gates=sensor_dict.get("max_static_gates"),
+                motion_energy_gates=sensor_dict.get("motion_energy_gates"),
+                static_energy_gates=sensor_dict.get("static_energy_gates"),
             )
 
             self._fire_callbacks()
@@ -353,14 +407,11 @@ class LD2410BLE:
     async def _execute_disconnect(self) -> None:
         """Execute disconnection."""
         async with self._connect_lock:
-            read_char = self._read_char
             client = self._client
             self._expected_disconnect = True
             self._client = None
-            self._read_char = None
-            self._write_char = None
             if client and client.is_connected:
-                await client.stop_notify(read_char)
+                await client.stop_notify(CHARACTERISTIC_NOTIFY)
                 await client.disconnect()
 
     @retry_bluetooth_connection_error(DEFAULT_ATTEMPTS)
