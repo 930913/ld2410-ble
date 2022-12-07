@@ -57,7 +57,7 @@ class LD2410BLE:
     def __init__(
         self, ble_device: BLEDevice, advertisement_data: AdvertisementData | None = None
     ) -> None:
-        """Init the LEDBLE."""
+        """Init the LD2410BLE."""
         self._ble_device = ble_device
         self._advertisement_data = advertisement_data
         self._operation_lock = asyncio.Lock()
@@ -205,6 +205,24 @@ class LD2410BLE:
         self._callbacks.append(callback)
         return unregister_callback
 
+    async def initialise(self) -> None:
+        _LOGGER.debug(
+            "%s: Sending configuration commands", self.name
+        )
+        await self._send_command(CMD_BT_PASS)
+        await asyncio.sleep(0.1)
+        await self._send_command(CMD_ENABLE_CONFIG)
+        await asyncio.sleep(0.1)
+        await self._send_command(CMD_ENABLE_ENGINEERING_MODE)
+        await asyncio.sleep(0.1)
+        await self._send_command(CMD_DISABLE_CONFIG)
+        await asyncio.sleep(0.1)
+
+        _LOGGER.debug(
+            "%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi
+        )
+        await self._client.start_notify(CHARACTERISTIC_NOTIFY, self._notification_handler)
+
     async def _ensure_connected(self) -> None:
         """Ensure connection to device is established."""
         if self._connect_lock.locked():
@@ -231,34 +249,11 @@ class LD2410BLE:
                 ble_device_callback=lambda: self._ble_device,
             )
             _LOGGER.debug("%s: Connected; RSSI: %s", self.name, self.rssi)
-            resolved = self._resolve_characteristics(client.services)
-            if not resolved:
-                # Try to handle services failing to load
-                resolved = self._resolve_characteristics(await client.get_services())
 
             self._client = client
             self._reset_disconnect_timer()
 
-            _LOGGER.debug(
-                "%s: Sending configuration commands", self.name
-            )
-            await self._send_command(CMD_BT_PASS)
-            await asyncio.sleep(0.1)
-            await self._send_command(CMD_ENABLE_CONFIG)
-            await asyncio.sleep(0.1)
-            await self._send_command(CMD_ENABLE_ENGINEERING_MODE)
-            await asyncio.sleep(0.1)
-            await self._send_command(CMD_DISABLE_CONFIG)
-            await asyncio.sleep(0.1)
-
-            _LOGGER.debug(
-                "%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi
-            )
-            await client.start_notify(CHARACTERISTIC_NOTIFY, self._notification_handler)
-            if not self._protocol:
-                await self._resolve_protocol()
-
-    def intify(state): return int.from_bytes(state, byteorder='little')
+    def intify(self, state): return int.from_bytes(state, byteorder='little')
 
     def _notification_handler(self, _sender: int, data: bytearray) -> None:
         """Handle notification responses."""
@@ -295,19 +290,21 @@ class LD2410BLE:
                 for i in range(0, 9):
                     sensor_dict.update({'static_energy_gate_{}'.format(i): em.group('static_energy_gates')[i]})
 
-        self._state = LD2410BLEState(
-            is_moving = sensor_dict('is_moving'),
-            is_static = sensor_dict('is_static'),
-            moving_target_distance = sensor_dict('moving_target_distance'),
-            moving_target_energy = sensor_dict('moving_target_energy'),
-            static_target_distance = sensor_dict('static_target_distance'),
-            static_target_energy = sensor_dict('static_target_energy'),
-            detection_distance = sensor_dict('detection_distance'),
-            max_motion_gates = sensor_dict('max_motion_gates'),
-            max_static_gates = sensor_dict('max_static_gates'),
-            motion_energy_gates = sensor_dict('motion_energy_gates'),
-            static_energy_gates = sensor_dict('static_energy_gates')
-        )
+            self._state = LD2410BLEState(
+                is_moving = sensor_dict.get('is_moving'),
+                is_static = sensor_dict.get('is_static'),
+                moving_target_distance = sensor_dict.get('moving_target_distance'),
+                moving_target_energy = sensor_dict.get('moving_target_energy'),
+                static_target_distance = sensor_dict.get('static_target_distance'),
+                static_target_energy = sensor_dict.get('static_target_energy'),
+                detection_distance = sensor_dict.get('detection_distance'),
+                max_motion_gates = sensor_dict.get('max_motion_gates'),
+                max_static_gates = sensor_dict.get('max_static_gates'),
+                motion_energy_gates = sensor_dict.get('motion_energy_gates'),
+                static_energy_gates = sensor_dict.get('static_energy_gates')
+            )
+
+            self._fire_callbacks()
 
         _LOGGER.debug(
             "%s: Notification received; RSSI: %s: %s %s",
@@ -316,8 +313,6 @@ class LD2410BLE:
             data.hex(),
             self._state,
         )
-
-        self._fire_callbacks()
 
     def _reset_disconnect_timer(self) -> None:
         """Reset disconnect timer."""
@@ -398,7 +393,6 @@ class LD2410BLE:
     ) -> None:
         """Send command to device and read response."""
         await self._ensure_connected()
-        await self._resolve_protocol()
         if not isinstance(commands, list):
             commands = [commands]
         await self._send_command_while_connected(commands, retry)

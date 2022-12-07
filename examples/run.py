@@ -10,8 +10,7 @@ from ld2410_ble import LD2410BLE, LD2410BLEState
 _LOGGER = logging.getLogger(__name__)
 
 ADDRESS = "D0291B39-3A1B-7FF2-787B-4E743FED5B25"
-ADDRESS = "C6:70:45:5D:82:CE"
-
+ADDRESS = "D0291B39-3A1B-7FF2-787B-4E743FED5B25"
 
 async def run() -> None:
     scanner = BleakScanner()
@@ -34,6 +33,7 @@ async def run() -> None:
     device = await future
     ld2410b = LD2410BLE(device)
     cancel_callback = ld2410b.register_callback(on_state_changed)
+    await ld2410b.initialise()
     await asyncio.sleep(10)
     cancel_callback()
     await scanner.stop()

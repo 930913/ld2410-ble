@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "0.0.1"
 
 
 from bleak_retry_connector import get_device
 
 from .exceptions import CharacteristicMissingError
-from .ld2410_ble import BLEAK_EXCEPTIONS, LEDBLE, LEDBLEState
+from .ld2410_ble import BLEAK_EXCEPTIONS, LD2410BLE, LD2410BLEState
 
 __all__ = [
     "BLEAK_EXCEPTIONS",
     "CharacteristicMissingError",
-    "LEDBLE",
-    "LEDBLEState",
+    "LD2410BLE",
+    "LD241-BLEState",
     "get_device",
 ]
