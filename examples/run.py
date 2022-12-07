@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 ADDRESS = "D0291B39-3A1B-7FF2-787B-4E743FED5B25"
 ADDRESS = "D0291B39-3A1B-7FF2-787B-4E743FED5B25"
 
+
 async def run() -> None:
     scanner = BleakScanner()
     future: asyncio.Future[BLEDevice] = asyncio.Future()
