@@ -35,7 +35,7 @@ from .models import LD2410BLEState
 
 BLEAK_BACKOFF_TIME = 0.25
 
-__version__ = "0.0.1"
+__version__ = "0.0.0"
 
 
 WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Any])

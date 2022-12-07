@@ -2,6 +2,6 @@
 
 <!--next-version-placeholder-->
 
-## v0.0.1 (2022-12-07)
+## v0.0.0 (2022-12-07)
 ### Feature
 Initial commit
