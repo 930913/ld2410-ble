@@ -130,90 +130,112 @@ class LD2410BLE:
 
     @property
     def max_motion_gates(self) -> int:
+        assert self._state.max_motion_gates is not None  # nosec
         return self._state.max_motion_gates
 
     @property
     def max_static_gates(self) -> int:
+        assert self._state.max_static_gates is not None  # nosec
         return self._state.max_static_gates
 
     @property
     def motion_energy_gates(self) -> list[int]:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates
 
     @property
     def motion_energy_gate_0(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[0]
 
     @property
     def motion_energy_gate_1(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[1]
 
     @property
     def motion_energy_gate_2(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[2]
 
     @property
     def motion_energy_gate_3(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[3]
 
     @property
     def motion_energy_gate_4(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[4]
 
     @property
     def motion_energy_gate_5(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[5]
 
     @property
     def motion_energy_gate_6(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[6]
 
     @property
     def motion_energy_gate_7(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[7]
 
     @property
     def motion_energy_gate_8(self) -> int:
+        assert self._state.motion_energy_gates is not None  # nosec
         return self._state.motion_energy_gates[8]
 
     @property
     def static_energy_gates(self) -> list[int]:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates
 
     @property
     def static_energy_gate_0(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[0]
 
     @property
     def static_energy_gate_1(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[1]
 
     @property
     def static_energy_gate_2(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[2]
 
     @property
     def static_energy_gate_3(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[3]
 
     @property
     def static_energy_gate_4(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[4]
 
     @property
     def static_energy_gate_5(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[5]
 
     @property
     def static_energy_gate_6(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[6]
 
     @property
     def static_energy_gate_7(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[7]
 
     @property
     def static_energy_gate_8(self) -> int:
+        assert self._state.static_energy_gates is not None  # nosec
         return self._state.static_energy_gates[8]
 
     async def stop(self) -> None:
@@ -284,7 +306,7 @@ class LD2410BLE:
             self._client = client
             self._reset_disconnect_timer()
 
-    def intify(self, state) -> int:
+    def intify(self, state: bytes) -> int:
         return int.from_bytes(state, byteorder="little")
 
     def _notification_handler(self, _sender: int, data: bytearray) -> None:
@@ -294,68 +316,43 @@ class LD2410BLE:
         self._buf += data
         msg = re.search(frame_regex, self._buf)
         if msg:
-            self._buf = self._buf[msg.end():]
+            self._buf = self._buf[msg.end() :]  # noqa: E203
             target_state = msg.group("target_state")
             engineering_data = msg.group("engineering_data")
 
             target_state_int = self.intify(target_state)
-            sensor_dict = {
-                "is_moving": bool(target_state_int & MOVING_TARGET),
-                "is_static": bool(target_state_int & STATIC_TARGET),
-                "moving_target_distance": self.intify(
-                    msg.group("moving_target_distance")
-                ),
-                "moving_target_energy": self.intify(msg.group("moving_target_energy")),
-                "static_target_distance": self.intify(
-                    msg.group("static_target_distance")
-                ),
-                "static_target_energy": self.intify(msg.group("static_target_energy")),
-                "detection_distance": self.intify(msg.group("detection_distance")),
-            }
+            is_moving = bool(target_state_int & MOVING_TARGET)
+            is_static = bool(target_state_int & STATIC_TARGET)
+            moving_target_distance = self.intify(msg.group("moving_target_distance"))
+            moving_target_energy = self.intify(msg.group("moving_target_energy"))
+            static_target_distance = self.intify(msg.group("static_target_distance"))
+            static_target_energy = self.intify(msg.group("static_target_energy"))
+            detection_distance = self.intify(msg.group("detection_distance"))
 
+            max_motion_gates = None
+            max_static_gates = None
+            motion_energy_gates = None
+            static_energy_gates = None
             if engineering_data:
                 em = re.match(engineering_frame_regex, engineering_data)
-                sensor_dict.update(
-                    {"max_motion_gates": self.intify(em.group("maximum_motion_gates"))}
-                )
-                sensor_dict.update(
-                    {"max_static_gates": self.intify(em.group("maximum_static_gates"))}
-                )
-                sensor_dict.update(
-                    {
-                        "motion_energy_gates": [
-                            x for x in em.group("motion_energy_gates")
-                        ]
-                    }
-                )
-                sensor_dict.update(
-                    {
-                        "static_energy_gates": [
-                            x for x in em.group("static_energy_gates")
-                        ]
-                    }
-                )
-                for i in range(0, 9):
-                    sensor_dict.update(
-                        {f"motion_energy_gate_{i}": em.group("motion_energy_gates")[i]}
-                    )
-                for i in range(0, 9):
-                    sensor_dict.update(
-                        {f"static_energy_gate_{i}": em.group("static_energy_gates")[i]}
-                    )
+                if em:
+                    max_motion_gates = self.intify(em.group("maximum_motion_gates"))
+                    max_static_gates = self.intify(em.group("maximum_static_gates"))
+                    motion_energy_gates = [x for x in em.group("motion_energy_gates")]
+                    static_energy_gates = [x for x in em.group("static_energy_gates")]
 
             self._state = LD2410BLEState(
-                is_moving=sensor_dict.get("is_moving"),
-                is_static=sensor_dict.get("is_static"),
-                moving_target_distance=sensor_dict.get("moving_target_distance"),
-                moving_target_energy=sensor_dict.get("moving_target_energy"),
-                static_target_distance=sensor_dict.get("static_target_distance"),
-                static_target_energy=sensor_dict.get("static_target_energy"),
-                detection_distance=sensor_dict.get("detection_distance"),
-                max_motion_gates=sensor_dict.get("max_motion_gates"),
-                max_static_gates=sensor_dict.get("max_static_gates"),
-                motion_energy_gates=sensor_dict.get("motion_energy_gates"),
-                static_energy_gates=sensor_dict.get("static_energy_gates"),
+                is_moving=is_moving,
+                is_static=is_static,
+                moving_target_distance=moving_target_distance,
+                moving_target_energy=moving_target_energy,
+                static_target_distance=static_target_distance,
+                static_target_energy=static_target_energy,
+                detection_distance=detection_distance,
+                max_motion_gates=max_motion_gates,
+                max_static_gates=max_static_gates,
+                motion_energy_gates=motion_energy_gates,
+                static_energy_gates=static_energy_gates,
             )
 
             self._fire_callbacks()
