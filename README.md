@@ -1,14 +1,14 @@
 # LD2410 BLE
 
 <p align="center">
-  <a href="https://github.com/bluetooth-devices/ld2410-ble/actions?query=workflow%3ACI">
-    <img src="https://img.shields.io/github/workflow/status/bluetooth-devices/ld2410-ble/CI/main?label=CI&logo=github&style=flat-square" alt="CI Status" >
+  <a href="https://github.com/930913/ld2410-ble/actions?query=workflow%3ACI">
+    <img src="https://img.shields.io/github/workflow/status/930913/ld2410-ble/CI/main?label=CI&logo=github&style=flat-square" alt="CI Status" >
   </a>
   <a href="https://ld2410-ble.readthedocs.io">
     <img src="https://img.shields.io/readthedocs/ld2410-ble.svg?logo=read-the-docs&logoColor=fff&style=flat-square" alt="Documentation Status">
   </a>
-  <a href="https://codecov.io/gh/bluetooth-devices/ld2410-ble">
-    <img src="https://img.shields.io/codecov/c/github/bluetooth-devices/ld2410-ble.svg?logo=codecov&logoColor=fff&style=flat-square" alt="Test coverage percentage">
+  <a href="https://codecov.io/gh/930913/ld2410-ble">
+    <img src="https://img.shields.io/codecov/c/github/930913/ld2410-ble.svg?logo=codecov&logoColor=fff&style=flat-square" alt="Test coverage percentage">
   </a>
 </p>
 <p align="center">

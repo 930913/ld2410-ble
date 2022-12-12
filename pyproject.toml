@@ -5,7 +5,7 @@ description = "Interface with LD2410B modules from HiLink"
 authors = ["930913 <3722064+930913@users.noreply.github.com>"]
 license = "Apache Software License 2.0"
 readme = "README.md"
-repository = "https://github.com/bluetooth-devices/ld2410-ble"
+repository = "https://github.com/930913/ld2410-ble"
 documentation = "https://ld2410-ble.readthedocs.io"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -19,8 +19,8 @@ packages = [
 ]
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/bluetooth-devices/ld2410-ble/issues"
-"Changelog" = "https://github.com/bluetooth-devices/ld2410-ble/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/930913/ld2410-ble/issues"
+"Changelog" = "https://github.com/930913/ld2410-ble/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"

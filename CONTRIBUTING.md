@@ -43,7 +43,7 @@ Ready to contribute? Here's how to set yourself up for local development.
 2. Clone your fork locally:
 
    ```shell
-   $ git clone git@github.com:bluetooth-devices/ld2410-ble.git
+   $ git clone git@github.com:<your-username>/ld2410-ble.git
    ```
 
 3. Install the project dependencies with [Poetry](https://python-poetry.org):
@@ -114,4 +114,4 @@ $ pytest tests
 
 The deployment should be automated and can be triggered from the Semantic Release workflow in GitHub. The next version will be based on [the commit logs](https://python-semantic-release.readthedocs.io/en/latest/commit-log-parsing.html#commit-log-parsing). This is done by [python-semantic-release](https://python-semantic-release.readthedocs.io/en/latest/index.html) via a GitHub action.
 
-[gh-issues]: https://github.com/bluetooth-devices/ld2410-ble/issues
+[gh-issues]: https://github.com/930913/ld2410-ble/issues
