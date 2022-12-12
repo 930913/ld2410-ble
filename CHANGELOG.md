@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.1 (2022-12-12)
+### Fix
+* Replace namespace ([`f7ebc79`](https://github.com/930913/ld2410-ble/commit/f7ebc7938df71d4d06aae2a6de02da29a9e45b45))
+
 ## v0.1.0 (2022-12-12)
 ### Feature
 * Handle disconnects ([`4ce126f`](https://github.com/930913/ld2410-ble/commit/4ce126f87d8b6029991d9faeef85b84c979a855e))
