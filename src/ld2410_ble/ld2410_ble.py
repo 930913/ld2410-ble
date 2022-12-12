@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import sys
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -40,13 +41,11 @@ __version__ = "0.0.0"
 
 WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Any])
 
-DISCONNECT_DELAY = 120
-
 RETRY_BACKOFF_EXCEPTIONS = (BleakDBusError,)
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_ATTEMPTS = 3
+DEFAULT_ATTEMPTS = sys.maxsize
 
 
 class LD2410BLE:
@@ -59,11 +58,11 @@ class LD2410BLE:
         self._operation_lock = asyncio.Lock()
         self._state = LD2410BLEState()
         self._connect_lock: asyncio.Lock = asyncio.Lock()
-        self._disconnect_timer: asyncio.TimerHandle | None = None
         self._client: BleakClientWithServiceCache | None = None
         self._expected_disconnect = False
         self.loop = asyncio.get_running_loop()
         self._callbacks: list[Callable[[LD2410BLEState], None]] = []
+        self._disconnected_callbacks: list[Callable[[], None]] = []
         self._buf = b""
 
     def set_ble_device_and_advertisement_data(
@@ -259,6 +258,22 @@ class LD2410BLE:
         self._callbacks.append(callback)
         return unregister_callback
 
+    def _fire_disconnected_callbacks(self) -> None:
+        """Fire the callbacks."""
+        for callback in self._disconnected_callbacks:
+            callback()
+
+    def register_disconnected_callback(
+        self, callback: Callable[[], None]
+    ) -> Callable[[], None]:
+        """Register a callback to be called when the state changes."""
+
+        def unregister_callback() -> None:
+            self._disconnected_callbacks.remove(callback)
+
+        self._disconnected_callbacks.append(callback)
+        return unregister_callback
+
     async def initialise(self) -> None:
         _LOGGER.debug("%s: Sending configuration commands", self.name)
         await self._send_command(CMD_BT_PASS)
@@ -285,12 +300,10 @@ class LD2410BLE:
                 self.rssi,
             )
         if self._client and self._client.is_connected:
-            self._reset_disconnect_timer()
             return
         async with self._connect_lock:
             # Check again while holding the lock
             if self._client and self._client.is_connected:
-                self._reset_disconnect_timer()
                 return
             _LOGGER.debug("%s: Connecting; RSSI: %s", self.name, self.rssi)
             client = await establish_connection(
@@ -304,7 +317,19 @@ class LD2410BLE:
             _LOGGER.debug("%s: Connected; RSSI: %s", self.name, self.rssi)
 
             self._client = client
-            self._reset_disconnect_timer()
+
+    async def _reconnect(self) -> None:
+        """Attempt a reconnect"""
+        _LOGGER.debug("ensuring connection")
+        try:
+            await self._ensure_connected()
+            _LOGGER.debug("ensured connection - initialising")
+            await self.initialise()
+        except BleakNotFoundError:
+            _LOGGER.debug("failed to ensure connection - backing off")
+            await asyncio.sleep(BLEAK_BACKOFF_TIME)
+            _LOGGER.debug("reconnecting again")
+            asyncio.create_task(self._reconnect())
 
     def intify(self, state: bytes) -> int:
         return int.from_bytes(state, byteorder="little")
@@ -365,17 +390,9 @@ class LD2410BLE:
             self._state,
         )
 
-    def _reset_disconnect_timer(self) -> None:
-        """Reset disconnect timer."""
-        if self._disconnect_timer:
-            self._disconnect_timer.cancel()
-        self._expected_disconnect = False
-        self._disconnect_timer = self.loop.call_later(
-            DISCONNECT_DELAY, self._disconnect
-        )
-
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
         """Disconnected callback."""
+        self._fire_disconnected_callbacks()
         if self._expected_disconnect:
             _LOGGER.debug(
                 "%s: Disconnected from device; RSSI: %s", self.name, self.rssi
@@ -386,18 +403,17 @@ class LD2410BLE:
             self.name,
             self.rssi,
         )
+        asyncio.create_task(self._reconnect())
 
     def _disconnect(self) -> None:
         """Disconnect from device."""
-        self._disconnect_timer = None
         asyncio.create_task(self._execute_timed_disconnect())
 
     async def _execute_timed_disconnect(self) -> None:
         """Execute timed disconnection."""
         _LOGGER.debug(
-            "%s: Disconnecting after timeout of %s",
+            "%s: Disconnecting",
             self.name,
-            DISCONNECT_DELAY,
         )
         await self._execute_disconnect()
 
