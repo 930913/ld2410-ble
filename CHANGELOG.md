@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.0 (2022-12-12)
+### Feature
+* Handle disconnects ([`4ce126f`](https://github.com/930913/ld2410-ble/commit/4ce126f87d8b6029991d9faeef85b84c979a855e))
+
 ## v0.0.1 (2022-12-07)
 ### Fix
 * Try change version ([`bd38389`](https://github.com/930913/ld2410-ble/commit/bd38389ffbe23ce3fbff09187a429db7e4b9f496))
