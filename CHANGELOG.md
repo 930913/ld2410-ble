@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.0 (2023-02-02)
+### Feature
+* Add configurable password ([`15ef013`](https://github.com/930913/ld2410-ble/commit/15ef013468befc5d74e8cda4f27b2cbee9c1fc76))
+
+### Fix
+* Bump isort build dependency ([`068d0a9`](https://github.com/930913/ld2410-ble/commit/068d0a93b01d89d9eb95df34b7ed8248921f8197))
+
 ## v0.1.1 (2022-12-12)
 ### Fix
 * Replace namespace ([`f7ebc79`](https://github.com/930913/ld2410-ble/commit/f7ebc7938df71d4d06aae2a6de02da29a9e45b45))
