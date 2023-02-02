@@ -22,7 +22,9 @@ from bleak_retry_connector import (
 from .const import (
     CHARACTERISTIC_NOTIFY,
     CHARACTERISTIC_WRITE,
-    CMD_BT_PASS,
+    CMD_BT_PASS_DEFAULT,
+    CMD_BT_PASS_POST,
+    CMD_BT_PASS_PRE,
     CMD_DISABLE_CONFIG,
     CMD_ENABLE_CONFIG,
     CMD_ENABLE_ENGINEERING_MODE,
@@ -50,11 +52,15 @@ DEFAULT_ATTEMPTS = sys.maxsize
 
 class LD2410BLE:
     def __init__(
-        self, ble_device: BLEDevice, advertisement_data: AdvertisementData | None = None
+        self,
+        ble_device: BLEDevice,
+        advertisement_data: AdvertisementData | None = None,
+        password: bytes = CMD_BT_PASS_DEFAULT,
     ) -> None:
         """Init the LD2410BLE."""
         self._ble_device = ble_device
         self._advertisement_data = advertisement_data
+        self._password = password
         self._operation_lock = asyncio.Lock()
         self._state = LD2410BLEState()
         self._connect_lock: asyncio.Lock = asyncio.Lock()
@@ -276,7 +282,7 @@ class LD2410BLE:
 
     async def initialise(self) -> None:
         _LOGGER.debug("%s: Sending configuration commands", self.name)
-        await self._send_command(CMD_BT_PASS)
+        await self._send_command(CMD_BT_PASS_PRE + self._password + CMD_BT_PASS_POST)
         await asyncio.sleep(0.1)
         await self._send_command(CMD_ENABLE_CONFIG)
         await asyncio.sleep(0.1)
